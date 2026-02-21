@@ -13,6 +13,18 @@ struct AdminCacheEntry {
     time_t expiresAt;
 };
 
+// Структура для хранения отложенных задач открепления
+struct UnpinTask {
+    int64_t chatId;
+    int32_t messageId;
+    time_t unpinTime;
+};
+
+// Очередь задач и флаги
+static std::vector<UnpinTask> unpinTasks;
+static std::mutex unpinMtx; // Блокирует только момент записи задачи (наносекунды), не тормозит сообщения
+static bool unpinThreadStarted = false;
+
 // Имя пользователя с ссылкой Markdown
 std::string getUserMention(TgBot::User::Ptr user) {
     if (!user) return std::string("Пользователь");
@@ -29,20 +41,46 @@ void deleteMessage(Logger &logger, int64_t chatId, int32_t messageId) {
     }
 }
 
+
 // Закрепить сообщения (на время)
 void pinMessage(Logger &logger, int64_t chatId, int32_t messageId, uint32_t seconds) {
     // Закрепляем
     bot->getApi().pinChatMessage(chatId, messageId, true);
     logger.log(LogLevel::WARNING, std::format("{} {}   Pin message", chatId, messageId));
 
-    // Таймер
-    std::thread([&, chatId, messageId, seconds]() {
-        std::this_thread::sleep_for(std::chrono::seconds(seconds));
-        try {
-            bot->getApi().unpinChatMessage(chatId, messageId);
-            logger.log(LogLevel::WARNING, std::format("{} {}   Unpin message", chatId, messageId));
-        } catch (...) {} // Ошибки игнорируем
-    }).detach();
+    // Добавляем задачу в очередь
+    {
+        std::lock_guard<std::mutex> lock(unpinMtx);
+        unpinTasks.push_back({chatId, messageId, std::time(nullptr) + seconds});
+    }
+
+    // Если единый поток-уборщик еще не запущен — запускаем его один раз навсегда
+    if (!unpinThreadStarted) {
+        unpinThreadStarted = true;
+        
+        // Передаем logger по ссылке, так как он живет в main() до закрытия программы
+        std::thread([&logger]() {
+            while (true) {
+                // Спим 1 минуту, затем проверяем
+                std::this_thread::sleep_for(std::chrono::minutes(1));
+                
+                time_t now = std::time(nullptr);
+                std::lock_guard<std::mutex> lock(unpinMtx);
+                
+                // Проходим по списку и удаляем то, чье время вышло
+                for (auto it = unpinTasks.begin(); it != unpinTasks.end(); ) {
+                    if (now >= it->unpinTime) {
+                        try {
+                            bot->getApi().unpinChatMessage(it->chatId, it->messageId);
+                            logger.log(LogLevel::WARNING, std::format("{} {}   Unpin message", it->chatId, it->messageId));
+                        } catch (...) {} // Ошибки игнорируем (сообщение могли уже удалить вручную)
+                        
+                        it = unpinTasks.erase(it); // Удаляем выполненную задачу из списка
+                    } else ++it;
+                }
+            }
+        }).detach();
+    }
 }
 
 // Проверка пользователя на Админа

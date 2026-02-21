@@ -30,7 +30,7 @@ void setupEvents(Logger &logger, UserDB &db) {
         // Проверка на Спам
         if (
             !isAdmin &&                   // Если не Админ И
-            spamFilter.isSpaming(userId) // Превышен ли лимит сообщений 
+            spamFilter.isSpaming(chatId, userId) // Превышен ли лимит сообщений 
         ) {
             int muteTime = db.getViolation(chatId, userId) * MUTE_TIME_SPAM;
             // Мутим пользователя
@@ -42,7 +42,7 @@ void setupEvents(Logger &logger, UserDB &db) {
                 nullptr, nullptr, nullptr, MESSAGE_FORMAT, true
             );
 
-            spamFilter.clearUserHistory(userId); // Очищаем историю
+            spamFilter.clearUserHistory(chatId, userId); // Очищаем историю
             logger.log(LogLevel::WARNING, std::format("{} {}   Mute user, reason: spam", chatId, userId)); // Лог о муте
             db.incrementViolation(chatId, userId); // Добавляем 1 к нарушения в DB
 
