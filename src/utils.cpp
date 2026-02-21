@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <regex>
 #include <string_view>
-#include <ranges>
 #include <boost/algorithm/string.hpp>
 #include "config.hpp"
 
@@ -102,16 +101,41 @@ std::string escapeText(const std::string &str) {
         return str;
 }
 
-// Проверка строки на ссылки
+// Проверка строки на ссылки с учетом Белого списка (Whitelist)
 bool hasLink(const std::string &str) {
     if (str.empty()) return false;
+    
+    // Регулярное выражение для поиска любых URL
     static const std::regex url_regex(
-        // Ловит: http, https, ftp, www, t.me, discord.gg
         R"((https?://|ftp://|www\.|t\.me/|discord\.gg|youtube\.com/)\S+)", 
         std::regex::icase | std::regex::optimize
     );
+
+    // Ищем все совпадения ссылок в тексте
+    auto words_begin = std::sregex_iterator(str.begin(), str.end(), url_regex);
+    auto words_end = std::sregex_iterator();
+
+    // Перебираем каждую найденную ссылку
+    for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+        std::string match = i->str();
+        std::string match_lower = to_lower(match); // Приводим к нижнему регистру для надежности
+        
+        bool is_whitelisted = false;
+        
+        // Проверяем, есть ли в найденной ссылке разрешенный домен
+        for (const auto& allowed_domain : whitelist) {
+            if (match_lower.find(allowed_domain) != std::string::npos) {
+                is_whitelisted = true;
+                break; // Ссылка безопасна, проверяем следующую
+            }
+        }
+        
+        // Если мы нашли ссылку, и её НЕТ в белом списке — сразу возвращаем true (УДАЛИТЬ СООБЩЕНИЕ!)
+        if (!is_whitelisted) return true;
+    }
     
-    return std::regex_search(str, url_regex);
+    // Если ссылки не найдены, или все найденные ссылки оказались в белом списке
+    return false;
 }
 
 // Проверка строки на запрещённые слова

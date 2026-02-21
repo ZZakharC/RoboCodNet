@@ -41,6 +41,17 @@ void deleteMessage(Logger &logger, int64_t chatId, int32_t messageId) {
     }
 }
 
+TgBot::Message::Ptr sendMessage(Logger &logger, int64_t chatId, const std::string& text, 
+                                    TgBot::GenericReply::Ptr replyMarkup,
+                                    bool disableNotification, 
+                                    const std::string& parseMode) {
+    try {
+        return bot->getApi().sendMessage(chatId, text, nullptr, nullptr, replyMarkup, parseMode, disableNotification);
+    } catch (const TgBot::TgException& e) {
+        logger.log(LogLevel::ERROR, std::format("{}   API ERROR: {}", chatId, e.what()));
+        return nullptr;
+    }
+}
 
 // Закрепить сообщения (на время)
 void pinMessage(Logger &logger, int64_t chatId, int32_t messageId, uint32_t seconds) {

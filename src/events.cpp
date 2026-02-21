@@ -37,9 +37,9 @@ void setupEvents(Logger &logger, UserDB &db) {
             muteUser(chatId, userId, muteTime);
 
             // Уведомляем чат (без уведомления)
-            bot->getApi().sendMessage(chatId, 
+            sendMessage(logger, chatId, 
                 std::format("🐢 {} превысил(а) лимит сообщений в минуту. Пользователь *заглушен* на {} сек", getUserMention(message->from), muteTime),
-                nullptr, nullptr, nullptr, MESSAGE_FORMAT, true
+                nullptr, true
             );
 
             spamFilter.clearUserHistory(chatId, userId); // Очищаем историю
@@ -60,7 +60,7 @@ void setupEvents(Logger &logger, UserDB &db) {
                 if (user->isBot) continue; // Не приветствуем ботов
 
                 logger.log(LogLevel::INFO, std::format("{} {}   User join", chatId, user->id)); // Лог
-                bot->getApi().sendMessage(chatId,std::format("Добро пожаловать в группу {} 🎉", getUserMention(message->from)), nullptr, nullptr, nullptr, MESSAGE_FORMAT, true); // Сообщение без уведомления
+                sendMessage(logger, chatId,std::format("Добро пожаловать в группу {} 🎉", getUserMention(message->from)), nullptr, true); // Сообщение без уведомления
             }
             return;
         }
@@ -72,7 +72,7 @@ void setupEvents(Logger &logger, UserDB &db) {
             // Лог
             logger.log(LogLevel::INFO, std::format("{} {}   User left", chatId, message->leftChatMember->id)); // Лог
             // Отправка сообщения об уходе (отключено)
-            //bot->getApi().sendMessage(message->chat->id, std::format("Пользователь {} выбрал быть счастливым.", getUserMention(message)), nullptr, nullptr, nullptr, MESSAGE_FORMAT); // Сообщения
+            //sendMessage(logger, message->chat->id, std::format("Пользователь {} выбрал быть счастливым.", getUserMention(message)), nullptr); // Сообщения
             return;
         }
         
@@ -92,9 +92,10 @@ void setupEvents(Logger &logger, UserDB &db) {
             deleteMessage(logger, chatId, message->messageId); // Удаление сообщения с ссылкой
             
             // Отправка сообщения в чат об удалении (без уведомления)
-            bot->getApi().sendMessage(
+            sendMessage(
+                logger,
                 chatId,
-                std::format("⛔ {} отправил(а) ссылку в чат. Сообщение удалено", getUserMention(message->from)), nullptr, nullptr, nullptr, MESSAGE_FORMAT, true
+                std::format("⛔ {} отправил(а) ссылку в чат. Сообщение удалено", getUserMention(message->from)), nullptr, true
             );
 
             logger.log(LogLevel::WARNING, std::format("{} {}   Deleted message, reason: sending link", chatId, message->messageId)); // Лог о удалении
@@ -115,9 +116,10 @@ void setupEvents(Logger &logger, UserDB &db) {
             muteUser(chatId, message->from->id, muteTime); // Выдаём мут не время * количество нарушений
 
             // Отправка сообщения в чат об удалении (без уведомления)
-            bot->getApi().sendMessage(
+            sendMessage(
+                logger,
                 chatId,
-                std::format("❌ {} отправил(а) сообщения с запрещённым словом в чат. *Сообщение удалено*, *пользователь заглушен* на {} сек", getUserMention(message->from), muteTime), nullptr, nullptr, nullptr, MESSAGE_FORMAT, true
+                std::format("❌ {} отправил(а) сообщения с запрещённым словом в чат. *Сообщение удалено*, *пользователь заглушен* на {} сек", getUserMention(message->from), muteTime), nullptr, true
             );
 
             // Откладываем для быстрого ответа от бота

@@ -52,9 +52,9 @@ void setupCommands(Logger &logger)
     bot->getEvents().onCommand("status", status);
 
     // Правила
-    bot->getEvents().onCommand("rules", [](TgBot::Message::Ptr message)
+    bot->getEvents().onCommand("rules", [&logger](TgBot::Message::Ptr message)
     {
-        bot->getApi().sendMessage(message->chat->id, std::format("📖 [Ссылка на Правила]({})", RULES_GROUP_LINK), nullptr, nullptr, nullptr, MESSAGE_FORMAT, true);
+        sendMessage(logger, message->chat->id, std::format("📖 [Ссылка на Правила]({})", RULES_GROUP_LINK), nullptr, true);
     });
     
     // Удаления
@@ -123,7 +123,7 @@ void setupCommands(Logger &logger)
         muteUser(chatId, message->replyToMessage->from->id, time);
 
         // Отправляем сообщения (без уведомления)
-        bot->getApi().sendMessage(chatId, std::format("{} заглушил(а) пользователя {} на {} сек", getUserMention(message->from), getUserMention(message->replyToMessage->from), time), nullptr, nullptr, nullptr, MESSAGE_FORMAT, true);
+        sendMessage(logger, chatId, std::format("{} заглушил(а) пользователя {} на {} сек", getUserMention(message->from), getUserMention(message->replyToMessage->from), time), nullptr, true);
     });
 
     // УнМут
@@ -154,7 +154,7 @@ void setupCommands(Logger &logger)
         unmuteUser(chatId, message->replyToMessage->from->id);
 
         // Отправляем сообщения (без уведомления)
-        bot->getApi().sendMessage(chatId, std::format("{} снял(а) заглушение с пользователя {}", getUserMention(message->from), getUserMention(message->replyToMessage->from)), nullptr, nullptr, nullptr, MESSAGE_FORMAT, true);
+        sendMessage(logger, chatId, std::format("{} снял(а) заглушение с пользователя {}", getUserMention(message->from), getUserMention(message->replyToMessage->from)), nullptr, true);
     });
 
     // Квиз
@@ -211,7 +211,7 @@ void setupCommands(Logger &logger)
         // Пропускаем пустые сообщения
         if (text.empty()) return;
 
-        auto new_message = bot->getApi().sendMessage(message->chat->id, text, nullptr, nullptr, nullptr, MESSAGE_FORMAT);
+        auto new_message = sendMessage(logger, message->chat->id, text, nullptr);
         
         pinMessage(logger, new_message->chat->id, new_message->messageId, TIME_PIN_TASK);
     });
