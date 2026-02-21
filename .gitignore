@@ -1,0 +1,13 @@
+*
+
+!build/
+!include/
+!src/
+
+!build/**
+!include/**
+!src/**
+
+build/bin
+
+!.gitignore
