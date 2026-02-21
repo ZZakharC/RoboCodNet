@@ -54,22 +54,30 @@ bool isUserAdmin(int64_t chatId, int64_t userId, bool useCache) {
     time_t now = std::time(nullptr);
     auto key = std::make_pair(chatId, userId);
 
+    // Защита от бесконечной утечки памяти (Memory Leak)
+    if (cache.size() > 5000)
+        cache.clear();
+
     // Проверяем кэш
-    if (useCache && cache.count(key)) {
-        if (cache[key].expiresAt > now) 
-            return cache[key].isAdmin; // Возвращаем сохраненное значение
-        else 
-            cache.erase(key); // Данные устарели, удаляем
+   if (useCache) {
+        auto it = cache.find(key);
+        if (it != cache.end()) {
+            if (it->second.expiresAt > now)
+                return it->second.isAdmin; // Возвращаем сохраненное значение
+            else
+                cache.erase(it); // Данные устарели, удаляем
+        }
     }
 
     // Если в кэше нет делаем запрос
     bool isAdmin = false;
+
     try {
         auto member = bot->getApi().getChatMember(chatId, userId);
         if (member->status == "administrator" || member->status == "creator")
             isAdmin = true;
     } catch (...) {
-        return false; // При ошибке считаем, что не админ, и НЕ кэшируем ошибку
+        isAdmin = false; // При ошибке считаем, что не админ
     }
 
     // Сохраняем в кэш на TIME_CACHE_IS_ADMIN секунд
@@ -97,6 +105,13 @@ void muteUser(int64_t chatId, int64_t userId, int timeSeconds) {
 void unmuteUser(int64_t chatId, int64_t userId) {
     auto permissions = std::make_shared<TgBot::ChatPermissions>();
     permissions->canSendMessages = true;
+    permissions->canSendPhotos = true;
+    permissions->canSendOtherMessages = true;
+    permissions->canSendAudios = true;
+    permissions->canSendDocuments = true;
+    permissions->canSendPolls = true;
+    permissions->canSendVideoNotes = true;
+    permissions->canSendVoiceNotes = true;
 
     bot->getApi().restrictChatMember(
         chatId,

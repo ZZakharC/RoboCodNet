@@ -6,6 +6,7 @@
 #include <string>
 #include <format>
 #include <sstream>
+#include <utility>
 
 void status(const TgBot::Message::Ptr message) {
     // Отправляем сообщения (без уведомления)

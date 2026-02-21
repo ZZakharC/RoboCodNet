@@ -7,7 +7,11 @@ Logger::Logger(const std::string &filename) : logFile(filename, std::ios::app) {
 
 Logger::~Logger() {
     log(LogLevel::WARNING, "LOGGER   CLOSE");
-    logFile.close();
+    
+    if (logFile.is_open()) {
+        logFile.flush();
+        logFile.close();
+    }
 }
 
 // Вывод лога
@@ -36,9 +40,15 @@ void Logger::log(LogLevel level, std::string_view text)
         // Ошибка
         case LogLevel::ERROR: message = timeStr + std::string(" [ERROR] ") + text.data(); break;
     }
+
     // Вывод лога
     std::cout << message << std::endl; // В консоль
     
-    if (logFile.is_open()) // Если файл открыт 
+    if (logFile.is_open()) { // Если файл открыт 
         logFile << message << std::endl; // В файл
+        
+        // При ошибках/придупреждениях принудительно записываем логи в файл
+        if (level == LogLevel::ERROR || level == LogLevel::WARNING)
+            logFile.flush();
+    }
 }

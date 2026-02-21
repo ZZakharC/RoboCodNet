@@ -35,7 +35,7 @@ int main()
         delete bot; 
         return 1;
     } catch (...) { 
-        logger.log(LogLevel::ERROR, "Unknown error occurred");
+        logger.~Logger();
         delete bot;
         return 1;
     }
