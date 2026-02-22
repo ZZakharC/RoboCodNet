@@ -7,6 +7,7 @@ UserDB::UserDB(const std::string &db_file, Logger &log) : logger(log) {
     if (sqlite3_open(db_file.c_str(), &db)) {
         logger.log(LogLevel::ERROR, std::format("DB   OPEN: {}", sqlite3_errmsg(db)));
         sqlite3_close(db);
+        db = nullptr; // Защита от утечки памяти
         throw std::runtime_error("OPEN DB");
     }
 

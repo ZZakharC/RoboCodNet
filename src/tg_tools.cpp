@@ -103,9 +103,15 @@ bool isUserAdmin(int64_t chatId, int64_t userId, bool useCache) {
     time_t now = std::time(nullptr);
     auto key = std::make_pair(chatId, userId);
 
-    // Защита от бесконечной утечки памяти (Memory Leak)
-    if (cache.size() > 5000)
-        cache.clear();
+    // Защита от бесконечной утечки памяти
+    if (cache.size() > 5000) {
+        // Очистка устаревших
+        for (auto it = cache.begin(); it != cache.end(); ) {
+            if (it->second.expiresAt <= now) it = cache.erase(it);
+            else ++it;
+        }
+        if (cache.size() > 5000) cache.clear(); // Экстренный сброс, если все записи актуальны
+    }
 
     // Проверяем кэш
    if (useCache) {
